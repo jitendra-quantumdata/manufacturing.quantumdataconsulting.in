@@ -99,7 +99,10 @@ function countQuery(t,rows){
   return null;
 }
 function listAll(t,rows){
-  if(!wantsAll(t))return null;
+  // "wise" means entity-wise: return every entity and the requested field,
+  // even when the user does not explicitly say "all/every/list".
+  const wise=/\bwise\b/.test(t);
+  if(!wantsAll(t)&&!wise)return null;
   const filtered=filterByConditions(t,rows);
   if(filtered){
     const op=filtered.operator&&filtered.operator!=='='?` ${filtered.operator} ${fmt(filtered.target)}`:` = ${filtered.metric?fmt(filtered.target):esc(filtered.value)}`;
@@ -107,8 +110,11 @@ function listAll(t,rows){
   }
   const ms=metricsMentioned(t);
   if(ms.length===1)return `<b>${esc(ms[0].label)} for all ${esc(ENTITY_LABEL.toLowerCase())}s:</b><br>${rows.map(r=>`• <b>${esc(r[ENTITY_IDX])}</b> — ${fmt(num(r[ms[0].i]))}`).join('<br>')}`;
+  const cat=categoryMatch(t);
+  if(cat&&cat.value===null){
+    return `<b>${esc(cat.label)} for all ${esc(ENTITY_LABEL.toLowerCase())}s:</b><br>${rows.map(r=>`• <b>${esc(r[ENTITY_IDX])}</b> — ${esc(r[cat.idx])}`).join('<br>')}`;
+  }
   if(entityListRequested(t))return `<b>${esc(ENTITY_LABEL)}s:</b> ${entityRows(rows).map(esc).join(' · ')}.`;
-  const cat=categoryMatch(t);if(cat&&cat.value===null)return `<b>${esc(cat.label)} values:</b> ${distinctValues(cat.idx,rows).map(esc).join(' · ')}.`;
   return null;
 }
 function unknownEntity(t,rows){
